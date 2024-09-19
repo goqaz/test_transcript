@@ -1,0 +1,9 @@
+# Environnement virtuel
+env/
+
+# Fichiers Python compilés
+__pycache__/
+*.pyc
+
+# Fichiers de configuration de l'éditeur
+.vscode/
