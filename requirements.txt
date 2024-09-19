@@ -1,0 +1,2 @@
+streamlit==1.30.0
+youtube_transcript_api==0.4.4
