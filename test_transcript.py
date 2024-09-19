@@ -1,5 +1,5 @@
 import streamlit as st
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript, CouldNotDecodeTranscript
 import re
 import logging
 
@@ -32,22 +32,28 @@ if st.button("Tester Transcription"):
         else:
             st.write(f"Vidéo ID extraite : {video_id}")
             try:
+                st.write("Liste des transcriptions disponibles :")
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                transcripts_info = []
+                for transcript in transcript_list:
+                    transcript_type = "Manuel" if not transcript.is_generated else "Généré automatiquement"
+                    transcripts_info.append(f"Langue : {transcript.language} ({transcript.language_code}), Type : {transcript_type}")
+                st.write("\n".join(transcripts_info))
+
+                # Tenter de récupérer la transcription en français
                 st.write("Tentative de récupération de la transcription en français.")
-                transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['fr'])
-                transcript = " ".join([t['text'] for t in transcript_list])
-                st.success("Transcription récupérée avec succès.")
-                st.text_area("Transcription :", transcript, height=300)
-            except (TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript) as e:
-                st.warning(f"Transcription en français non disponible : {e}. Tentative en anglais.")
-                try:
-                    st.write("Tentative de récupération de la transcription en anglais.")
-                    transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en'])
-                    transcript = " ".join([t['text'] for t in transcript_list])
-                    st.success("Transcription en anglais récupérée avec succès.")
-                    st.text_area("Transcription :", transcript, height=300)
-                except (TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript) as e:
-                    st.error("Aucune transcription disponible pour cette vidéo.")
-                    logging.error(f"Erreur lors de la récupération des transcriptions: {e}")
+                transcript = transcript_list.find_transcript(['fr'])
+                transcript_text = " ".join([t['text'] for t in transcript.fetch()])
+                st.success("Transcription en français récupérée avec succès.")
+                st.text_area("Transcription :", transcript_text, height=300)
+
+            except NoTranscriptFound:
+                st.warning("Aucune transcription trouvée pour cette vidéo.")
+            except TranscriptsDisabled:
+                st.warning("Les sous-titres sont désactivés pour cette vidéo.")
+            except CouldNotRetrieveTranscript as e:
+                st.warning(f"Erreur lors de la récupération de la transcription : {e}")
             except Exception as e:
-                st.error(f"Erreur inattendue lors de la récupération de la transcription: {e}")
-                logging.error(f"Erreur inattendue: {e}")
+                st.error(f"Erreur inattendue : {e}")
+                logging.error(f"Erreur inattendue : {e}")
+
